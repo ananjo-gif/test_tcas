@@ -1,3 +1,5 @@
+
+
 <!doctype html>
 <html lang="th">
 <head>
@@ -822,9 +824,9 @@ function linForecast(vals){
 function fcVerdict(g){ return g>2?{t:'เติบโต',cls:'overgreen',ar:'▲'} : g<-2?{t:'ลดลง',cls:'crit',ar:'▼'} : {t:'ทรงตัว',cls:'warn',ar:'▬'}; }
 function fcConf(r2){ return r2>=0.8?'สูง' : r2>=0.5?'กลาง' : 'ต่ำ'; }
 // แท่งเทียบรายปีในการ์ด KPI (ต่อท้ายด้วยปีวิเคราะห์แนวโน้มเมื่อเปิดโหมด)
-function cmpBarsHTML(vals){
+function cmpBarsHTML(vals, noFc){
   let years=CMP_YEARS.slice(), vs=vals.slice();
-  if(compareForecast){ const f=linForecast(vals); years=years.concat(FC_YEARS); vs=vs.concat(f.proj); }
+  if(compareForecast && !noFc){ const f=linForecast(vals); years=years.concat(FC_YEARS); vs=vs.concat(f.proj); }
   const mx=Math.max(1,...vs), mxv=Math.max(...vs);
   return years.map((y,i)=>{const isF=compareForecast&&i>=CMP_YEARS.length; const first=isF&&i===CMP_YEARS.length;
     const bg=isF?'':(';background:var('+YEAR_SV[y]+')');
@@ -1254,11 +1256,11 @@ function renderKPIs(rows){
     return `<span class="k-delta ${cls}">${ar} ${Math.abs(dp).toFixed(1)}% <span class="k-delta-note">(อัตราส่วนเพิ่มจากปีที่ผ่านมา)</span></span>`;
   };
   let html='';
-  // แผนการรับ (มคอ.2)
+  // แผนการรับ (มคอ.)
   {
     const perYear=YEARS.map(planScopeFor);
-    html+=`<div class="kpi" style="--kc:var(--s7)"><div class="k-lab"><span class="dot" style="background:var(--s7)"></span>แผนการรับ (มคอ.2)</div>
-      <div class="k-main"><div class="k-val tnum">${fmt(perYear[selIdx])}</div><img class="plan-ico" src="${PLAN_ICON}" width="60" height="60" alt="แผนการรับ (มคอ.2)"></div>
+    html+=`<div class="kpi" style="--kc:var(--s7)"><div class="k-lab"><span class="dot" style="background:var(--s7)"></span>แผนการรับ (มคอ.)</div>
+      <div class="k-main"><div class="k-val tnum">${fmt(perYear[selIdx])}</div><img class="plan-ico" src="${PLAN_ICON}" width="60" height="60" alt="แผนการรับ (มคอ.)"></div>
       <div class="k-row">${deltaFor(perYear)}</div></div>`;
   }
   const selByK={}; METRICS.forEach(m=>{ selByK[m.k]=sum(base.filter(r=>r.y===sel),m.k); });
@@ -1271,7 +1273,7 @@ function renderKPIs(rows){
       : `<div class="k-val tnum">${fmt(perYear[selIdx])}</div>${conv}<div class="k-row">${deltaFor(perYear)}${sparkline(perYear,m.sv)}</div>`;
     html+=`<div class="kpi" style="--kc:var(${m.sv})"><div class="k-lab"><span class="dot" style="background:var(${m.sv})"></span>${m.lab}</div>${body}</div>`;
   });
-  // สถานะเทียบแผนรับ (มคอ.2) — เกิน/ต่ำกว่าแผน
+  // สถานะเทียบแผนรับ (มคอ.) — เกิน/ต่ำกว่าแผน
   {
     const planV=planScopeFor(sel);
     const actual=sum(base.filter(r=>r.y===sel),'in'); // รายงานตัว
@@ -1298,7 +1300,7 @@ function renderKPIs(rows){
 }
 function renderKPIsCompare(boxes){
   const base=baseFilter();
-  const cards=[{lab:'แผนการรับ (มคอ.2)',sv:'--s7',fn:y=>planScopeFor(y)},
+  const cards=[{lab:'แผนการรับ (มคอ.)',sv:'--s7',fn:y=>planScopeFor(y),noFc:true},
     {lab:'ผู้สมัคร',sv:'--s1',fn:y=>sum(base.filter(r=>r.y===y),'ap')},
     {lab:'ผ่านคัดเลือก',sv:'--s2',fn:y=>sum(base.filter(r=>r.y===y),'ps')},
     {lab:'ยืนยันสิทธิ์',sv:'--s3',fn:y=>sum(base.filter(r=>r.y===y),'wn')},
@@ -1306,7 +1308,7 @@ function renderKPIsCompare(boxes){
   let html='';
   cards.forEach(c=>{
     const vals=CMP_YEARS.map(c.fn);
-    const bars=cmpBarsHTML(vals);
+    const bars=cmpBarsHTML(vals, c.noFc);
     const a=vals[0],b=vals[vals.length-1];
     html+=`<div class="kpi" style="--kc:var(${c.sv})"><div class="k-lab"><span class="dot" style="background:var(${c.sv})"></span>${c.lab} <span style="margin-left:auto">${deltaArrow(pct(b-a,a))}</span></div><div class="cmpbars">${bars}</div></div>`;
   });
@@ -1356,7 +1358,7 @@ function renderTrend(){
   const base=baseFilter();
   const s4=(y,k)=>sum(base.filter(r=>r.y===y),k);
   const series=[
-    {lab:'แผน มคอ.2',sv:'--s7',values:YEARS.map(planScopeFor)},
+    {lab:'แผน มคอ.',sv:'--s7',values:YEARS.map(planScopeFor)},
     {lab:'ผู้สมัคร',sv:'--s1',values:YEARS.map(y=>s4(y,'ap'))},
     {lab:'ผ่านคัดเลือก',sv:'--s2',values:YEARS.map(y=>s4(y,'ps'))},
     {lab:'ยืนยันสิทธิ์',sv:'--s3',values:YEARS.map(y=>s4(y,'wn'))},
@@ -1594,7 +1596,7 @@ function renderFacTable(ctx, rows){
   const keyFn=ctx.keyFn, nameLab=ctx.nameLab;
   const mjMap={}, fcMap={};
   for(const r of rows){const k=keyFn(r),v=''+(r.mj||'');if(v&&(mjMap[k]===undefined||v<mjMap[k]))mjMap[k]=v; if(ctx.isProg&&fcMap[r.pg]===undefined)fcMap[r.pg]=r.fc;}
-  // แผน มคอ.2 (นับ 1 ครั้งต่อสาขา/คณะ ตามไฟล์แผน)
+  // แผน มคอ. (นับ 1 ครั้งต่อสาขา/คณะ ตามไฟล์แผน)
   const planMap={};
   for(const y of state.years){const pf=planFileFor(y); const src=ctx.isProg?pf.prog:pf.fac; for(const k in src) planMap[k]=(planMap[k]||0)+src[k];}
   const g=groupSum(rows,keyFn).map(o=>{const pl=planMap[o._k]||0;const rp=pl?100*o.in/pl:-1;return {...o,_y:rp,_mj:mjMap[o._k]||'￿',_plan:pl,_stp:rp};});
@@ -1611,7 +1613,7 @@ function renderFacTable(ctx, rows){
   const per=ctx.perPage||9999, pages=Math.max(1,Math.ceil(gf.length/per));
   if(ctx.page>=pages)ctx.page=pages-1; if(ctx.page<0)ctx.page=0;
   const pageRows=gf.slice(ctx.page*per, ctx.page*per+per);
-  const cols=[{k:'_mj',lab:nameLab},{k:'_plan',lab:'แผน มคอ.2'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_y',lab:'%รายงานตัว/แผน'},{k:'_stp',lab:'สถานะ'}];
+  const cols=[{k:'_mj',lab:nameLab},{k:'_plan',lab:'แผน มคอ.'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_y',lab:'%รายงานตัว/แผน'},{k:'_stp',lab:'สถานะ'}];
   let h='<thead><tr>'+cols.map(c=>`<th data-k="${c.k}">${c.lab}<span class="ar">${ctx.sortK===c.k?(ctx.sortD<0?'▼':'▲'):''}</span></th>`).join('')+'</tr></thead><tbody>';
   pageRows.forEach((o,i)=>{
     const num=ctx.page*per+i+1;
@@ -1711,7 +1713,7 @@ function renderPlanTab(rows){
   const seats=sum(rows,'rc');
   const kb=document.getElementById('planKpis');kb.innerHTML='';
   const cards=[
-    {lab:'แผนรับ (มคอ.2)',val:plan,sv:'--s7'},
+    {lab:'แผนรับ (มคอ.)',val:plan,sv:'--s7'},
     {lab:'รายงานตัว',val:income,sv:'--s4'},
     {lab:'%บรรลุแผน',val:pct(income,plan),sv:'--s3',isPct:true},
   ];
@@ -1726,7 +1728,7 @@ function renderPlanTab(rows){
   let arr=[...facs].map(fc=>{const p=planFac.get(fc)||0;const inc=(gin.find(o=>o._k===fc)||{in:0}).in;return {fc,plan:p,inc,ach:pct(inc,p)};});
   arr=arr.filter(o=>o.plan>0||o.inc>0).sort((a,b)=>b.inc-a.inc);
   drawPlanChart(document.getElementById('planChart'),arr);
-  legendHTML(document.getElementById('planLegend'),[{sv:'--s4',lab:'รายงานตัว'},{sv:'--baseline',lab:'แผนรับ (มคอ.2)'}]);
+  legendHTML(document.getElementById('planLegend'),[{sv:'--s4',lab:'รายงานตัว'},{sv:'--baseline',lab:'แผนรับ (มคอ.)'}]);
   // table
   const cols=[{k:'fc',lab:'คณะ'},{k:'plan',lab:'แผนรับ'},{k:'inc',lab:'รับจริง'},
     {k:'diff',lab:'ส่วนต่าง',calc:o=>o.inc-o.plan,fmt:v=>(v>0?'+':'')+fmt(v)},
@@ -2217,7 +2219,7 @@ function renderYearCompare(){
   });
   // columns = metrics ; rows = years. (transposed)
   const COLS=[
-    {lab:'แผนรวม (มคอ.2)',f:p=>p.pl,rate:false},
+    {lab:'แผนรวม (มคอ.)',f:p=>p.pl,rate:false},
     {lab:'ผู้สมัคร',f:p=>p.ap,rate:false},
     {lab:'ผ่านคัดเลือก',f:p=>p.ps,rate:false},
     {lab:'ยืนยันสิทธิ์',f:p=>p.wn,rate:false},
