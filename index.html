@@ -454,6 +454,24 @@
   table.cmptbl th.fccol,table.cmptbl td.fccol{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
   table.cmptbl td.fccol{color:var(--accent-ink);font-weight:600}
   table.cmptbl thead th.fccol{color:var(--accent-ink)}
+  /* ---- มือถือ: แถบหัวเลื่อนไปกับหน้า (ไม่ค้าง) เพื่อให้เห็น/เลื่อนข้อมูลได้เต็มจอ ---- */
+  @media(max-width:760px){
+    header.top{position:static;backdrop-filter:none;background:var(--page)}
+    .top-in{padding:12px 14px 0}
+    .wrap{padding:0 14px 48px}
+    main{padding-top:14px}
+    .filters{gap:10px;padding:10px 0 6px}
+    .fgroup{width:100%}
+    .filters select,.filters input[type=search]{width:100%;min-width:0;max-width:none}
+    #fProgram{max-width:none}
+    .cmp-metricbar{gap:8px}
+    .cmp-yearleg{font-size:11px;gap:8px 12px}
+    /* แท็บ: ค้างไว้บนสุดเพื่อสลับหน้าได้โดยไม่ต้องเลื่อนขึ้น */
+    nav.tabs{position:sticky;top:0;z-index:45;background:var(--page);margin:2px -14px 0;padding:7px 14px;border-top:1px solid var(--border-2);border-bottom:1px solid var(--border)}
+    /* ตารางในหน้าจอเล็ก: เลื่อนแนวนอนได้ */
+    .modal-card .tbl-wrap{overflow-x:auto}
+    table.dt thead th{position:static}
+  }
   footer{color:var(--muted);font-size:12px;text-align:center;padding:26px 0 6px;border-top:1px solid var(--border);margin-top:34px}
 </style>
 </head>
@@ -2932,4 +2950,3 @@ renderAll();
 
 </body>
 </html>
-
