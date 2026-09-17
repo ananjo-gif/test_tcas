@@ -559,7 +559,7 @@
         <div class="card"><div class="ctl"><div><h3>เปรียบเทียบตามรอบ</h3><div class="csub" id="rBarSub"></div></div>
           <div class="seg" id="rBarMetric"></div></div>
           <div class="chartbox" id="rBarChart"></div></div>
-        <div class="card"><div class="ctl"><div><h3>เปรียบเทียบในแต่ละรอบ</h3><div class="csub">จำนวนในแต่ละรอบ: แผนรับ · สมัคร · ผ่านคัดเลือก · ยืนยันสิทธิ์ · รายงานตัว</div></div></div>
+        <div class="card"><div class="ctl"><div><h3>เปรียบเทียบในแต่ละรอบ</h3><div class="csub">จำนวนในแต่ละรอบ: แผนรับ · สมัคร (รายการ) · ผ่านคัดเลือก · ยืนยันสิทธิ์ · รายงานตัว</div></div></div>
           <div class="chartbox" id="rConvChart"></div>
           <div class="legend" id="rConvLegend"></div></div>
       </div>
@@ -748,7 +748,7 @@ function planScopeFor(y){ const pf=planFileFor(y);
   return state.program ? (pf.prog[state.program]||0) : state.faculty ? (pf.fac[state.faculty]||0) : pf.total; }
 const ROUND_TH = {"Portfolio":"รอบ 1 Portfolio","Quota":"รอบ 2 Quota","Admission":"รอบ 3 Admission","Direct Admission":"รอบ 4 Direct"};
 const METRICS = [
-  {k:"ap",lab:"ผู้สมัคร",sv:"--s1"},
+  {k:"ap",lab:"ผู้สมัคร (รายการ)",sv:"--s1"},
   {k:"ps",lab:"ผ่านคัดเลือก",sv:"--s2"},
   {k:"wn",lab:"ยืนยันสิทธิ์",sv:"--s3"},
   {k:"in",lab:"รายงานตัว",sv:"--s4"},
@@ -787,7 +787,7 @@ let compareMetric='ap';
 let geoProvMetric='ap', geoSchMetric='ap';   // ตัวชี้วัดแยกของตารางจังหวัด/โรงเรียน (โหมดเทียบ)
 function metricLabOf(k){const m=METRICS.find(x=>x.k===k);return m?m.lab:k;}
 function buildGeoTblMetric(){
-  const opts=[['ap','ผู้สมัคร'],['ps','ผ่านคัดเลือก'],['wn','ยืนยันสิทธิ์'],['in','รายงานตัว']];
+  const opts=[['ap','ผู้สมัคร (รายการ)'],['ps','ผ่านคัดเลือก'],['wn','ยืนยันสิทธิ์'],['in','รายงานตัว']];
   const html=opts.map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
   const pv=document.getElementById('geoTblMetric'), sc=document.getElementById('geoSchMetric');
   if(pv){pv.innerHTML=html;pv.value=geoProvMetric;pv.onchange=()=>{geoProvMetric=pv.value;renderGeo();};}
@@ -946,7 +946,7 @@ function buildCompareBar(){
   bar.innerHTML='';
   const lab=document.createElement('span'); lab.className='flabel'; lab.textContent='เทียบตามตัวชี้วัด'; bar.appendChild(lab);
   const seg=document.createElement('div'); seg.className='seg'; seg.id='cmpMetricSeg';
-  const opts=[{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว'}];
+  const opts=[{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว'}];
   opts.forEach(o=>{const b=document.createElement('button');b.textContent=o.lab;b.className=(compareMetric===o.k?'on':'');
     b.onclick=()=>{compareMetric=o.k;geoProvMetric=o.k;geoSchMetric=o.k;
       const pv=document.getElementById('geoTblMetric'),sc=document.getElementById('geoSchMetric');if(pv)pv.value=o.k;if(sc)sc.value=o.k;
@@ -1102,7 +1102,7 @@ function hbarChart(box, items, {color, metricLab}){
 }
 // (legend built inside stackBarChart)
 // 100% stacked horizontal bar — องค์ประกอบ สมัคร·ผ่าน·ยืนยัน·รายงานตัว ต่อแถว
-const STACK_SEG=[{k:'ap',lab:'สมัคร',c:'#3f86e0'},{k:'ps',lab:'ผ่านการคัดเลือก',c:'#1c2c86'},{k:'wn',lab:'ยืนยันสิทธิ์',c:'#e08a3c'},{k:'in',lab:'รายงานตัว',c:'#8e2f8f'}];
+const STACK_SEG=[{k:'ap',lab:'สมัคร (รายการ)',c:'#3f86e0'},{k:'ps',lab:'ผ่านการคัดเลือก',c:'#1c2c86'},{k:'wn',lab:'ยืนยันสิทธิ์',c:'#e08a3c'},{k:'in',lab:'รายงานตัว',c:'#8e2f8f'}];
 function stackBarChart(box, items){
   const wrap=document.createElement('div'); wrap.className='sbars';
   items.forEach(it=>{
@@ -1212,7 +1212,7 @@ function treemap(box, items, {metricLab}={}){
 function legendHTML(el2,items){el2.innerHTML=items.map(s=>`<span class="lg"><span class="sw" style="background:var(${s.sv})"></span>${s.lab}</span>`).join('');}
 
 // line chart (multi-series) with toggleable legend
-const trendHidden=new Set(['ผู้สมัคร']); // hidden by default (very large scale)
+const trendHidden=new Set(['ผู้สมัคร (รายการ)']); // hidden by default (very large scale)
 // เส้นโค้งลื่น (Catmull-Rom → Cubic Bézier) ผ่านทุกจุด
 function smoothPath(pts){
   if(pts.length<2) return pts.length?('M'+pts[0][0].toFixed(1)+' '+pts[0][1].toFixed(1)):'';
@@ -1361,7 +1361,7 @@ function renderKPIs(rows){
 function renderKPIsCompare(boxes){
   const base=baseFilter();
   const cards=[{lab:'แผนการรับ (มคอ.)',sv:'--s7',fn:y=>planScopeFor(y),noFc:true},
-    {lab:'ผู้สมัคร',sv:'--s1',fn:y=>sum(base.filter(r=>r.y===y),'ap')},
+    {lab:'ผู้สมัคร (รายการ)',sv:'--s1',fn:y=>sum(base.filter(r=>r.y===y),'ap')},
     {lab:'ผ่านคัดเลือก',sv:'--s2',fn:y=>sum(base.filter(r=>r.y===y),'ps')},
     {lab:'ยืนยันสิทธิ์',sv:'--s3',fn:y=>sum(base.filter(r=>r.y===y),'wn')},
     {lab:'รายงานตัว',sv:'--s4',fn:y=>sum(base.filter(r=>r.y===y),'in')}];
@@ -1378,12 +1378,12 @@ function renderKPIsCompare(boxes){
 function renderFunnel(rows){
   if(state.compare){
     const base=baseFilter();
-    const stages=[['ap','ผู้สมัคร'],['ps','ผ่านคัดเลือก'],['wn','ยืนยันสิทธิ์'],['in','รายงานตัว']];
+    const stages=[['ap','ผู้สมัคร (รายการ)'],['ps','ผ่านคัดเลือก'],['wn','ยืนยันสิทธิ์'],['in','รายงานตัว']];
     const groups=stages.map(([k,lab])=>({label:lab,values:CMP_YEARS.map(y=>sum(base.filter(r=>r.y===y),k))}));
     columnChart(document.getElementById('funnel'),{groups,series:cmpSeries()});
     return;
   }
-  const stages=[{k:'ap',lab:'ผู้สมัคร',sv:'--s1'},{k:'ps',lab:'ผ่านคัดเลือก',sv:'--s2'},{k:'wn',lab:'ยืนยันสิทธิ์',sv:'--s3'},{k:'in',lab:'รายงานตัว',sv:'--s4'}];
+  const stages=[{k:'ap',lab:'ผู้สมัคร (รายการ)',sv:'--s1'},{k:'ps',lab:'ผ่านคัดเลือก',sv:'--s2'},{k:'wn',lab:'ยืนยันสิทธิ์',sv:'--s3'},{k:'in',lab:'รายงานตัว',sv:'--s4'}];
   const vals=stages.map(s=>sum(rows,s.k));const max=Math.max(...vals,1);
   const box=document.getElementById('funnel');box.innerHTML="";
   stages.forEach((s,i)=>{
@@ -1419,7 +1419,7 @@ function renderTrend(){
   const s4=(y,k)=>sum(base.filter(r=>r.y===y),k);
   const series=[
     {lab:'แผน มคอ.',sv:'--s7',values:YEARS.map(planScopeFor)},
-    {lab:'ผู้สมัคร',sv:'--s1',values:YEARS.map(y=>s4(y,'ap'))},
+    {lab:'ผู้สมัคร (รายการ)',sv:'--s1',values:YEARS.map(y=>s4(y,'ap'))},
     {lab:'ผ่านคัดเลือก',sv:'--s2',values:YEARS.map(y=>s4(y,'ps'))},
     {lab:'ยืนยันสิทธิ์',sv:'--s3',values:YEARS.map(y=>s4(y,'wn'))},
     {lab:'รายงานตัว',sv:'--s4',values:YEARS.map(y=>s4(y,'in'))},
@@ -1441,7 +1441,7 @@ function renderRoundsTab(rows){
     const g2=groupSum(rows,r=>r.r);
     const rbr=ROUNDS.map(rn=>{const o=g2.find(x=>x._k===rn)||{rc:0,ap:0,ps:0,wn:0,in:0};return {rn,...o};});
     const conv=rbr.map(o=>({label:ROUND_TH[o.rn],values:[o.rc||0,o.ap,o.ps,o.wn,o.in]}));
-    const cs=[{sv:'--s7',lab:'แผนรับ'},{sv:'--s1',lab:'สมัคร'},{sv:'--s2',lab:'ผ่านคัดเลือก'},{sv:'--s3',lab:'ยืนยันสิทธิ์'},{sv:'--s4',lab:'รายงานตัว'}];
+    const cs=[{sv:'--s7',lab:'แผนรับ'},{sv:'--s1',lab:'สมัคร (รายการ)'},{sv:'--s2',lab:'ผ่านคัดเลือก'},{sv:'--s3',lab:'ยืนยันสิทธิ์'},{sv:'--s4',lab:'รายงานตัว'}];
     columnChart(document.getElementById('rConvChart'),{groups:conv,series:cs});
     legendHTML(document.getElementById('rConvLegend'),cs);
     // ตารางเทียบรายปี ตามรอบ
@@ -1477,7 +1477,7 @@ function renderRoundsTab(rows){
   document.getElementById('rBarSub').textContent=m.lab+' แยกตามรอบ';
   // conversion grouped (%)
   const conv=rowsByRound.map(o=>({label:ROUND_TH[o.rn],values:[o.rc||0,o.ap,o.ps,o.wn,o.in]}));
-  const cs=[{sv:'--s7',lab:'แผนรับ'},{sv:'--s1',lab:'สมัคร'},{sv:'--s2',lab:'ผ่านคัดเลือก'},{sv:'--s3',lab:'ยืนยันสิทธิ์'},{sv:'--s4',lab:'รายงานตัว'}];
+  const cs=[{sv:'--s7',lab:'แผนรับ'},{sv:'--s1',lab:'สมัคร (รายการ)'},{sv:'--s2',lab:'ผ่านคัดเลือก'},{sv:'--s3',lab:'ยืนยันสิทธิ์'},{sv:'--s4',lab:'รายงานตัว'}];
   columnChart(document.getElementById('rConvChart'),{groups:conv,series:cs});
   legendHTML(document.getElementById('rConvLegend'),cs);
   // table — ขยายดูรายภูมิภาค→จังหวัดได้
@@ -1514,13 +1514,13 @@ function roundRegionProvAgg(rn,reg){
 }
 function roundRegionSubTable(rn){
   const regs=roundRegionAgg(rn); let body='';
-  const HEAD='<thead><tr><th>ภูมิภาค</th><th>สมัคร</th><th>ผ่าน</th><th>ยืนยัน</th><th>รายงานตัว</th><th>%ผ่าน</th><th>%ยืนยัน</th><th>%รายงานตัว</th></tr></thead>';
+  const HEAD='<thead><tr><th>ภูมิภาค</th><th>สมัคร (รายการ)</th><th>ผ่าน</th><th>ยืนยัน</th><th>รายงานตัว</th><th>%ผ่าน</th><th>%ยืนยัน</th><th>%รายงานตัว</th></tr></thead>';
   regs.forEach(o=>{
     const key=rn+'|'+o.reg, rexp=rndRegExp.has(key), regName=GEO.regions[o.reg].replace(' (Other)','');
     body+=`<tr><td><span class="rrtoggle" data-k="${key}">${rexp?'▾':'▸'} ${regName}</span></td><td>${fmt(o.ap)}</td><td>${fmt(o.ps)}</td><td>${fmt(o.wn)}</td><td class="inc">${fmt(o.in)}</td><td>${pct(o.ps,o.ap).toFixed(1)}%</td><td>${pct(o.wn,o.ps).toFixed(1)}%</td><td>${pct(o.in,o.wn).toFixed(1)}%</td></tr>`;
     if(rexp){
       const provs=roundRegionProvAgg(rn,o.reg);
-      body+=`<tr class="projsub"><td colspan="8"><table class="dt subtbl projtbl">${RREG_CG}<thead><tr><th>จังหวัด</th><th>สมัคร</th><th>ผ่าน</th><th>ยืนยัน</th><th>รายงานตัว</th><th>%ผ่าน</th><th>%ยืนยัน</th><th>%รายงานตัว</th></tr></thead><tbody>`
+      body+=`<tr class="projsub"><td colspan="8"><table class="dt subtbl projtbl">${RREG_CG}<thead><tr><th>จังหวัด</th><th>สมัคร (รายการ)</th><th>ผ่าน</th><th>ยืนยัน</th><th>รายงานตัว</th><th>%ผ่าน</th><th>%ยืนยัน</th><th>%รายงานตัว</th></tr></thead><tbody>`
         +(provs.length?provs.map(pr=>`<tr><td>${pr.name}</td><td>${fmt(pr.ap)}</td><td>${fmt(pr.ps)}</td><td>${fmt(pr.wn)}</td><td class="inc">${fmt(pr.in)}</td><td>${pct(pr.ps,pr.ap).toFixed(1)}%</td><td>${pct(pr.wn,pr.ps).toFixed(1)}%</td><td>${pct(pr.in,pr.wn).toFixed(1)}%</td></tr>`).join(''):`<tr><td colspan="8" style="color:var(--muted)">ไม่มีข้อมูล</td></tr>`)
         +`</tbody></table></td></tr>`;
     }
@@ -1609,7 +1609,7 @@ function renderFacultyTab(rows){
 // ---- ตารางคณะ/สาขา แบบขยายดูรายรอบ→โครงการ (รองรับหลายตารางแยกกันด้วย ctx) ----
 const FAC_CTX ={tblId:'facTable',    hintId:'facTblHint',  pagerId:'facPager',     filterId:'facFilter',     filter:'', unit:'คณะ',  perPage:20, page:0, keyFn:r=>r.fc, nameLab:'คณะ',      isProg:false, sortK:'_mj', sortD:1, exp:new Set(), roundExp:new Set(), rows:[]};
 const PROG_CTX={tblId:'facProgTable',hintId:'facProgHint', pagerId:'facProgPager', filterId:'facProgFilter', filter:'', unit:'สาขา', perPage:20, page:0, keyFn:r=>r.pg, nameLab:'สาขาวิชา', isProg:true,  sortK:'_mj', sortD:1, exp:new Set(), roundExp:new Set(), rows:[]};
-const FAC_RND_COLS=[{k:'ord',lab:'รอบ'},{k:'rc',lab:'แผนการรับ'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_prc',lab:'%รายงานตัว/แผน'},{k:'_st',lab:'สถานะ'}];
+const FAC_RND_COLS=[{k:'ord',lab:'รอบ'},{k:'rc',lab:'แผนการรับ'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_prc',lab:'%รายงานตัว/แผน'},{k:'_st',lab:'สถานะ'}];
 const FAC_PROJ_COLS=[{k:'pid',lab:'โครงการ'},...FAC_RND_COLS.slice(1)];
 function facRoundRowsFor(ctx,name){
   const per=ROUNDS.map(()=>({rc:0,ap:0,ps:0,wn:0,in:0}));
@@ -1673,7 +1673,7 @@ function renderFacTable(ctx, rows){
   const per=ctx.perPage||9999, pages=Math.max(1,Math.ceil(gf.length/per));
   if(ctx.page>=pages)ctx.page=pages-1; if(ctx.page<0)ctx.page=0;
   const pageRows=gf.slice(ctx.page*per, ctx.page*per+per);
-  const cols=[{k:'_mj',lab:nameLab},{k:'_plan',lab:'แผน มคอ.'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_y',lab:'%รายงานตัว/แผน'},{k:'_stp',lab:'สถานะ'}];
+  const cols=[{k:'_mj',lab:nameLab},{k:'_plan',lab:'แผน มคอ.'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_y',lab:'%รายงานตัว/แผน'},{k:'_stp',lab:'สถานะ'}];
   let h='<thead><tr>'+cols.map(c=>`<th data-k="${c.k}">${c.lab}<span class="ar">${ctx.sortK===c.k?(ctx.sortD<0?'▼':'▲'):''}</span></th>`).join('')+'</tr></thead><tbody>';
   pageRows.forEach((o,i)=>{
     const num=ctx.page*per+i+1;
@@ -1711,7 +1711,7 @@ function renderProjectsTab(rows){
   const m=METRICS.find(x=>x.k===projK);
   const top=g.slice(0,15);
   document.getElementById('projHint').textContent=`${g.length} โครงการ`+(projRounds.size<ROUNDS.length?` · ${[...projRounds].map(x=>ROUND_TH[x]).join(', ')}`:' · ทุกรอบ');
-  hbarChart(document.getElementById('projChart'),top.map(o=>({label:o._k.replace(/^โครงการ/,'').replace(/\s*\(.*\)$/,''),value:o[projK],meta:`<div class="tr"><span>สมัคร</span><b>${fmt(o.ap)}</b></div><div class="tr"><span>รายงานตัว</span><b>${fmt(o.in)}</b></div>`})),{color:m.sv,metricLab:m.lab});
+  hbarChart(document.getElementById('projChart'),top.map(o=>({label:o._k.replace(/^โครงการ/,'').replace(/\s*\(.*\)$/,''),value:o[projK],meta:`<div class="tr"><span>สมัคร (รายการ)</span><b>${fmt(o.ap)}</b></div><div class="tr"><span>รายงานตัว</span><b>${fmt(o.in)}</b></div>`})),{color:m.sv,metricLab:m.lab});
   document.getElementById('projBarSub').textContent=m.lab+(state.compare?' · 15 อันดับแรก (รวม 4 ปี)':' · 15 อันดับแรก');
   curProjBase=rr;
   if(state.compare){
@@ -1738,7 +1738,7 @@ function projMajorRows(pj){
 }
 function projMajorSubTable(pj){
   const rows=projMajorRows(pj);
-  const HEAD='<thead><tr><th>สาขาวิชา (คณะ)</th><th>แผนการรับ</th><th>สมัคร</th><th>ผ่าน</th><th>ยืนยัน</th><th>รายงานตัว</th><th>%รายงานตัว/แผน</th><th>สถานะ</th></tr></thead>';
+  const HEAD='<thead><tr><th>สาขาวิชา (คณะ)</th><th>แผนการรับ</th><th>สมัคร (รายการ)</th><th>ผ่าน</th><th>ยืนยัน</th><th>รายงานตัว</th><th>%รายงานตัว/แผน</th><th>สถานะ</th></tr></thead>';
   const body=rows.length?rows.map((o,i)=>`<tr><td title="${(o.pg+' · '+o.fc).replace(/"/g,'&quot;')}">${i+1}) ${o.pg} <span style="color:var(--muted)">· ${o.fc.replace(/^คณะ/,'').replace(/^วิทยาลัย/,'วล.')}</span></td><td>${fmt(o.rc)}</td><td>${fmt(o.ap)}</td><td>${fmt(o.ps)}</td><td>${fmt(o.wn)}</td><td class="inc">${fmt(o.in)}</td><td>${o.rc?pct(o.in,o.rc).toFixed(1)+'%':'—'}</td>${facStatusCell(o.rc,o.in)}</tr>`).join(''):`<tr><td colspan="8" style="color:var(--muted)">ไม่มีข้อมูล</td></tr>`;
   let so=0,st=0,su=0; for(const o of rows){if(!o.rc)continue;const p=100*o.in/o.rc;if(p>100.05)so++;else if(p<99.95)su++;else st++;}
   return `<tr class="amsub"><td colspan="9"><div class="subttl">แยกตามสาขาวิชา/คณะ (เรียงตามรหัสสาขา major_id) · ${statSummary(so,st,su,'สาขา')}</div><div class="tbl-wrap"><table class="dt subtbl roundtbl">${RREG_CG}${HEAD}<tbody>${body}</tbody></table></div></td></tr>`;
@@ -1750,7 +1750,7 @@ function renderProjTable(gg){
   const ggF=projFilter?gg.filter(o=>o.rc&&statusKey(o.in,o.rc)===projFilter):gg;
   const data=ggF.slice().sort((a,b)=>{const x=a[projTblSortK],y=b[projTblSortK];return typeof x==='string'?projTblSortD*x.localeCompare(y,'th'):projTblSortD*((x||0)-(y||0));});
   const maxAp=Math.max(1,...data.map(o=>o.ap||0));
-  const cols=[{k:'_pid',lab:'โครงการ'},{k:'_nmaj',lab:'สาขาที่เปิดรับ'},{k:'rc',lab:'แผนการรับ'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว'},{k:'_prc',lab:'%รายงานตัว/แผน'},{k:'_stp',lab:'สถานะ'}];
+  const cols=[{k:'_pid',lab:'โครงการ'},{k:'_nmaj',lab:'สาขาที่เปิดรับ'},{k:'rc',lab:'แผนการรับ'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว'},{k:'_prc',lab:'%รายงานตัว/แผน'},{k:'_stp',lab:'สถานะ'}];
   let h='<thead><tr>'+cols.map(c=>`<th data-k="${c.k}">${c.lab}<span class="ar">${projTblSortK===c.k?(projTblSortD<0?'▼':'▲'):''}</span></th>`).join('')+'</tr></thead><tbody>';
   data.forEach((o,i)=>{
     const exp=projExp.has(o._k), nm=o._k.replace(/"/g,'&quot;');
@@ -2054,7 +2054,7 @@ function geoSchRoundSubTable(prov,amph,sch){
 let geoSchSortK='ap', geoSchSortD=-1, geoSchPage=0; const GEO_SCH_PER=50;
 function renderGeoSchoolTable(rows){
   const tbl=document.getElementById('geoSchTable'); if(!tbl)return;
-  const cols=[{k:'name',lab:'โรงเรียน'},{k:'reg',lab:'ภูมิภาค'},{k:'prov',lab:'จังหวัด'},{k:'amph',lab:'อำเภอ'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_pr',lab:'%รายงานตัว/สมัคร'}];
+  const cols=[{k:'name',lab:'โรงเรียน'},{k:'reg',lab:'ภูมิภาค'},{k:'prov',lab:'จังหวัด'},{k:'amph',lab:'อำเภอ'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_pr',lab:'%รายงานตัว/สมัคร'}];
   const data=rows.slice().sort((a,b)=>{let x=a[geoSchSortK],y=b[geoSchSortK];return typeof x==='string'?geoSchSortD*x.localeCompare(y,'th'):geoSchSortD*((x||0)-(y||0));});
   const pages=Math.max(1,Math.ceil(data.length/GEO_SCH_PER));
   if(geoSchPage>=pages)geoSchPage=pages-1; if(geoSchPage<0)geoSchPage=0;
@@ -2102,13 +2102,13 @@ function prepProjRows(projs){
   arr.sort((a,b)=>projSortK==='pid'?((projSortD*((a.pid||'').localeCompare(b.pid||'')))||(b.ap-a.ap)):projSortD*(((a[projSortK]??0))-((b[projSortK]??0))));
   return arr;
 }
-const GEO_RND_COLS=[{k:'ord',lab:'รอบ'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_pa',lab:'%ผ่าน/สมัคร'},{k:'_pw',lab:'%ยืนยัน/ผ่าน'},{k:'_piw',lab:'%รายงานตัว/ยืนยัน'}];
+const GEO_RND_COLS=[{k:'ord',lab:'รอบ'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_pa',lab:'%ผ่าน/สมัคร'},{k:'_pw',lab:'%ยืนยัน/ผ่าน'},{k:'_piw',lab:'%รายงานตัว/ยืนยัน'}];
 const GEO_PROJ_COLS=[{k:'pid',lab:'โครงการ'},...GEO_RND_COLS.slice(1)];
-const SCH_RND_COLS=[{k:'ord',lab:'รอบการสมัคร'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_pa',lab:'%ผ่าน/สมัคร'},{k:'_pr',lab:'%รายงานตัว/สมัคร'}];
+const SCH_RND_COLS=[{k:'ord',lab:'รอบการสมัคร'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_pa',lab:'%ผ่าน/สมัคร'},{k:'_pr',lab:'%รายงานตัว/สมัคร'}];
 const SCH_PROJ_COLS=[{k:'pid',lab:'โครงการ'},...SCH_RND_COLS.slice(1)];
 // ตารางรายชื่อโรงเรียน (ระดับกลาง ในป็อปอัปรายอำเภอ)
 let schSortK='ap', schSortD=-1;    // เริ่มต้น: สมัคร มาก→น้อย
-const SCH_LIST_COLS=[{k:'name',lab:'โรงเรียน'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_pa',lab:'%ผ่าน/สมัคร'},{k:'_pr',lab:'%รายงานตัว/สมัคร'}];
+const SCH_LIST_COLS=[{k:'name',lab:'โรงเรียน'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_pa',lab:'%ผ่าน/สมัคร'},{k:'_pr',lab:'%รายงานตัว/สมัคร'}];
 // per-province breakdown by admission round (จาก geo rows · ระดับคณะ)
 function provRoundRows(pi){
   const facIdx = state.faculty? GEO.faculties.indexOf(state.faculty) : -1;
@@ -2160,7 +2160,7 @@ let geoSortKey='ap', geoSortDir=-1; const geoExpanded=new Set();
 let geoPage=0; const GEO_PER=20;
 function renderGeoTable(rows){
   const tbl=document.getElementById('geoTable');
-  const cols=[{k:'name',lab:'จังหวัด'},{k:'reg',lab:'ภูมิภาค'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_p',lab:'%ผ่าน'}];
+  const cols=[{k:'name',lab:'จังหวัด'},{k:'reg',lab:'ภูมิภาค'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_p',lab:'%ผ่าน'}];
   const data=rows.slice().sort((a,b)=>{let x=a[geoSortKey],y=b[geoSortKey];return typeof x==='string'?geoSortDir*x.localeCompare(y,'th'):geoSortDir*((x||0)-(y||0));});
   const maxAp=Math.max(1,...data.map(d=>d.ap));
   const pages=Math.max(1,Math.ceil(data.length/GEO_PER));
@@ -2280,7 +2280,7 @@ function renderYearCompare(){
   // columns = metrics ; rows = years. (transposed)
   const COLS=[
     {lab:'แผนรวม (มคอ.)',f:p=>p.pl,rate:false},
-    {lab:'ผู้สมัคร',f:p=>p.ap,rate:false},
+    {lab:'ผู้สมัคร (รายการ)',f:p=>p.ap,rate:false},
     {lab:'ผ่านคัดเลือก',f:p=>p.ps,rate:false},
     {lab:'ยืนยันสิทธิ์',f:p=>p.wn,rate:false},
     {lab:'รายงานตัว',f:p=>p.in,rate:false},
@@ -2406,7 +2406,7 @@ function renderAmBar(){
   if(amBarPage>=pages)amBarPage=pages-1; if(amBarPage<0)amBarPage=0;
   const from=amBarPage*AM_BAR_PAGE, slice=top.slice(from,from+AM_BAR_PAGE);
   hbarChart(document.getElementById('amBar'), slice.map(r=>({label:r.n,value:r[amMetricK],
-    meta:`<div class="tr"><span>สมัคร</span><b>${fmt(r.ap)}</b></div><div class="tr"><span>รายงานตัว</span><b>${fmt(r.in)}</b></div>`})),{color:'--s8',metricLab:m.lab});
+    meta:`<div class="tr"><span>สมัคร (รายการ)</span><b>${fmt(r.ap)}</b></div><div class="tr"><span>รายงานตัว</span><b>${fmt(r.in)}</b></div>`})),{color:'--s8',metricLab:m.lab});
   document.getElementById('amBarSub').textContent=m.lab+` · ทุกอำเภอ (${top.length}) · หน้า ${amBarPage+1}/${pages}`;
   const pg=document.getElementById('amBarPager');
   if(pages<=1){pg.innerHTML='';return;}
@@ -2428,7 +2428,7 @@ function amphSelect(name){
 }
 function renderAmphTable(rows){
   const tbl=document.getElementById('amTable');
-  const cols=[{k:'n',lab:'อำเภอ/เขต'},{k:'sc',lab:'โรงเรียน'},{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_p',lab:'%ผ่าน/สมัคร'},{k:'_r',lab:'%รายงานตัว/สมัคร'}];
+  const cols=[{k:'n',lab:'อำเภอ/เขต'},{k:'sc',lab:'โรงเรียน'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_p',lab:'%ผ่าน/สมัคร'},{k:'_r',lab:'%รายงานตัว/สมัคร'}];
   const data=rows.map(o=>({...o,_p:pct(o.ps,o.ap),_r:pct(o.in,o.ap)}));
   data.sort((a,b)=>{let x=a[amSortKey],y=b[amSortKey];return typeof x==='string'?amSortDir*x.localeCompare(y,'th'):amSortDir*((x||0)-(y||0));});
   const maxAp=Math.max(1,...data.map(d=>d.ap));
@@ -2558,7 +2558,7 @@ function drawAmphMap(rows){
 }
 
 // ================= Sankey (แผนภาพการไหล) =================
-const SK_STAGES=[{k:'ap',lab:'สมัคร'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว'}];
+const SK_STAGES=[{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่านคัดเลือก'},{k:'wn',lab:'ยืนยันสิทธิ์'},{k:'in',lab:'รายงานตัว'}];
 const SK_DROPS=['ไม่ผ่านคัดเลือก','ไม่ยืนยันสิทธิ์','ไม่มารายงานตัว'];
 const SK_VIEWS=[['round','ตามรอบการสมัคร'],['project','ตามโครงการ'],['region','ตามภูมิภาค'],['prov','ตามจังหวัด'],['school','ตามโรงเรียน']];
 const SK_ROUNDCOLOR={0:'#4263eb',1:'#37a26f',2:'#e0752e',3:'#7a5be0',4:'#e0524a'};
@@ -2775,7 +2775,7 @@ function renderSkTable(groups){
     ...(isProj?[{k:'rnd',lab:'รอบการสมัคร'}]:[]),
     ...(isProv?[{k:'reg',lab:'ภูมิภาค'}]:[]),
     ...(isSchool?[{k:'prov',lab:'จังหวัด'},{k:'amph',lab:'อำเภอ'}]:[]),
-    {k:'ap',lab:'สมัคร'},
+    {k:'ap',lab:'สมัคร (รายการ)'},
     {k:'ps',lab:'ผ่านคัดเลือก'},
     {k:'_pp',lab:'%ผ่าน/สมัคร',pc:true},
     {k:'wn',lab:'ยืนยันสิทธิ์'},
@@ -2851,7 +2851,7 @@ function renderFlowModal(){
   const per=skGroupYearly(flowMCur.view, flowMCur.gk);
   const yrs=[...YEARS].sort((a,b)=>a-b);
   const allYears=yrs.concat(FC_YEARS);
-  const defs=[['ผู้สมัคร','ap','--s1'],['ผ่านคัดเลือก','ps','--s2'],['ยืนยันสิทธิ์','wn','--s3'],['รายงานตัว','in','--s4']];
+  const defs=[['ผู้สมัคร (รายการ)','ap','--s1'],['ผ่านคัดเลือก','ps','--s2'],['ยืนยันสิทธิ์','wn','--s3'],['รายงานตัว','in','--s4']];
   const series=defs.map(([lab,k,sv])=>{const actual=yrs.map(y=>per[y][k]); const s=fcScenarios(actual);
     // band: null for actual years, [low,high] for forecast years (start at last actual for continuity)
     const band=allYears.map((y,i)=>{ if(i<yrs.length-1)return null; if(i===yrs.length-1){const lv=actual[actual.length-1];return [lv,lv];} const h=i-yrs.length; return [s.low[h],s.high[h]]; });
