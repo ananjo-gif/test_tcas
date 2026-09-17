@@ -1,5 +1,3 @@
-
-
 <!doctype html>
 <html lang="th">
 <head>
@@ -455,6 +453,7 @@
   #flowMTable th.fccol,#flowMTable td.fccol{background:color-mix(in srgb,var(--accent) 8%,var(--surface));color:var(--accent-ink)}
   table.cmptbl th.fccol,table.cmptbl td.fccol{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
   table.cmptbl td.fccol{color:var(--accent-ink);font-weight:600}
+  .fc-range{font-size:9.5px;font-weight:400;color:var(--muted);margin-top:1px;white-space:nowrap}
   table.cmptbl thead th.fccol{color:var(--accent-ink)}
   /* ---- มือถือ: แถบหัวเลื่อนไปกับหน้า (ไม่ค้าง) เพื่อให้เห็น/เลื่อนข้อมูลได้เต็มจอ ---- */
   @media(max-width:760px){
@@ -731,7 +730,7 @@
       </div>
       <div class="card" style="margin-top:14px">
         <div class="tbl-wrap"><table class="dt compact" id="flowMTable"></table></div>
-        <div class="csub" id="flowMNote" style="margin-top:10px" hidden>🔮 คอลัมน์ที่มี * คือค่าวิเคราะห์แนวโน้มปี 2570–2572 (เส้นประในกราฟ) คำนวณด้วยเส้นแนวโน้มถดถอยเชิงเส้นจากข้อมูลจริง 4 ปี · <b>แนวโน้ม/ปี</b> = อัตราเปลี่ยนแปลงเฉลี่ยต่อปี · <b>โอกาส</b>: เติบโต ▲ / ทรงตัว ▬ / ลดลง ▼ — เป็นการประมาณการเพื่อดูทิศทาง</div>
+        <div class="csub" id="flowMNote" style="margin-top:10px" hidden>🔮 คอลัมน์ที่มี * คือค่าวิเคราะห์แนวโน้มปี 2570–2572 (เส้นประในกราฟ) ตามวิธีคำนวณที่เลือก · <b>ค่ากลาง</b> พร้อม <b>ช่วงต่ำ–สูง</b> (พื้นที่แรเงาในกราฟ) · <b>แนวโน้ม/ปี</b> = อัตราเปลี่ยนแปลงเฉลี่ยต่อปี · <b>โอกาส</b>: เติบโต ▲ / ทรงตัว ▬ / ลดลง ▼ — เป็นการประมาณการเพื่อดูทิศทาง</div>
       </div>
     </div>
   </div>
@@ -823,6 +822,54 @@ function linForecast(vals){
 }
 function fcVerdict(g){ return g>2?{t:'เติบโต',cls:'overgreen',ar:'▲'} : g<-2?{t:'ลดลง',cls:'crit',ar:'▼'} : {t:'ทรงตัว',cls:'warn',ar:'▬'}; }
 function fcConf(r2){ return r2>=0.8?'สูง' : r2>=0.5?'กลาง' : 'ต่ำ'; }
+// ---- วิธีวิเคราะห์แนวโน้มหลายแบบ (แต่ละแบบคืน {proj[3], fitted[], growthPct}) ----
+let forecastMethod='linear';
+const FC_METHOD_LABELS={linear:'เส้นตรง (Linear)',cagr:'อัตราทบต้น (CAGR)',ma:'ค่าเฉลี่ยเคลื่อนที่',holt:'Holt'};
+function fcLinear(vals){
+  const n=vals.length; let sx=0,sy=0,sxx=0,sxy=0;
+  for(let i=0;i<n;i++){sx+=i;sy+=vals[i];sxx+=i*i;sxy+=i*vals[i];}
+  const den=(n*sxx-sx*sx)||1, b=(n*sxy-sx*sy)/den, a=(sy-b*sx)/n, mean=sy/n;
+  const fitted=vals.map((_,i)=>a+b*i);
+  const proj=[n,n+1,n+2].map(t=>Math.max(0,a+b*t));
+  return {proj,fitted,growthPct: mean>0? b/mean*100:0};
+}
+function fcCAGR(vals){
+  const n=vals.length, first=vals[0], last=vals[n-1];
+  let r; if(first>0&&last>0) r=Math.pow(last/first,1/(n-1))-1; else r=fcLinear(vals).growthPct/100;
+  const fitted=vals.map((_,i)=> first>0? first*Math.pow(1+r,i): vals[i]);
+  const proj=[1,2,3].map(k=>Math.max(0, last*Math.pow(1+r,k)));
+  return {proj,fitted,growthPct:r*100};
+}
+function fcMA(vals){
+  const n=vals.length, W=Math.min(3,n);
+  const fitted=vals.map((v,i)=>{ if(i<1)return v; const w=Math.min(W,i); let s=0; for(let j=i-w;j<i;j++)s+=vals[j]; return s/w; });
+  const ext=vals.slice(), proj=[];
+  for(let k=0;k<3;k++){ const w=Math.min(W,ext.length); let s=0; for(let j=ext.length-w;j<ext.length;j++)s+=ext[j]; const f=s/w; proj.push(Math.max(0,f)); ext.push(f); }
+  const last=vals[n-1]; return {proj,fitted,growthPct: last>0? (proj[0]-last)/last*100:0};
+}
+function fcHolt(vals){
+  const al=0.6, bt=0.35, n=vals.length;
+  let level=vals[0], trend=(n>1? vals[1]-vals[0]:0);
+  const fitted=[vals[0]];
+  for(let i=1;i<n;i++){ fitted.push(level+trend); const pl=level; level=al*vals[i]+(1-al)*(level+trend); trend=bt*(level-pl)+(1-bt)*trend; }
+  const proj=[1,2,3].map(k=>Math.max(0, level+k*trend));
+  const mean=vals.reduce((s,v)=>s+v,0)/n;
+  return {proj,fitted,growthPct: mean>0? trend/mean*100:0};
+}
+const FC_METHODS={linear:fcLinear,cagr:fcCAGR,ma:fcMA,holt:fcHolt};
+function fcCompute(vals){ return (FC_METHODS[forecastMethod]||fcLinear)(vals); }
+// 3 ฉากทัศน์: กลาง = วิธีที่เลือก, ต่ำ/สูง = ช่วงจากความคลาดเคลื่อนในอดีต (RMSE) กว้างขึ้นตามระยะ
+function fcScenarios(vals){
+  const r=fcCompute(vals);
+  let se=0,cnt=0; for(let i=0;i<vals.length;i++){ if(r.fitted[i]==null)continue; const e=vals[i]-r.fitted[i]; se+=e*e; cnt++; }
+  const rmse=cnt? Math.sqrt(se/cnt):0, k=1.5;
+  const mid=r.proj.map(v=>Math.round(v));
+  const low=r.proj.map((v,h)=>Math.max(0,Math.round(v-k*rmse*Math.sqrt(h+1))));
+  const high=r.proj.map((v,h)=>Math.round(v+k*rmse*Math.sqrt(h+1)));
+  return {mid,low,high,growthPct:r.growthPct,rmse};
+}
+// เผื่อโค้ดเดิมอ้าง linForecast
+function linForecast(vals){ const r=fcCompute(vals); return {proj:r.proj.map(v=>Math.round(v)),growthPct:r.growthPct,fitted:r.fitted}; }
 // แท่งเทียบรายปีในการ์ด KPI (ต่อท้ายด้วยปีวิเคราะห์แนวโน้มเมื่อเปิดโหมด)
 function cmpBarsHTML(vals, noFc){
   let years=CMP_YEARS.slice(), vs=vals.slice();
@@ -841,7 +888,7 @@ function renderCompareTable(tblId, groups, nameLab, opts){
   const FC=compareForecast;
   groups.forEach(o=>{
     o._delta=pct((o.vals[last]||0)-(o.vals[first]||0),o.vals[first]||0);
-    if(FC){const f=linForecast(yrs.map(y=>o.vals[y]||0)); o._g=f.growthPct; o._p=f.proj; o._r2=f.r2;}
+    if(FC){const s=fcScenarios(yrs.map(y=>o.vals[y]||0)); o._g=s.growthPct; o._p=s.mid; o._lo=s.low; o._hi=s.high;}
   });
   const st=cmpSortState[tblId]||(cmpSortState[tblId]={k:'total',d:-1});
   groups.sort((a,b)=>{let x,y;
@@ -862,8 +909,8 @@ function renderCompareTable(tblId, groups, nameLab, opts){
     if(FC){
       const v=fcVerdict(o._g);
       row+=`<td>${deltaArrow(o._g)}</td>`
-        +o._p.map(pv=>`<td class="fccol tnum">${fmt(pv)}</td>`).join('')
-        +`<td><span class="pill ${v.cls}" title="ความเชื่อมั่น ${fcConf(o._r2)} (R²=${o._r2.toFixed(2)})">${v.ar} ${v.t}</span></td>`;
+        +o._p.map((pv,i)=>`<td class="fccol tnum">${fmt(pv)}<div class="fc-range">${fmt(o._lo[i])}–${fmt(o._hi[i])}</div></td>`).join('')
+        +`<td><span class="pill ${v.cls}" title="วิธี: ${FC_METHOD_LABELS[forecastMethod]} · ช่วงต่ำ–สูง">${v.ar} ${v.t}</span></td>`;
     } else {
       row+=`<td>${deltaArrow(o._delta)}</td><td class="tot tnum">${fmt(o.total)}</td>`;
     }
@@ -872,8 +919,8 @@ function renderCompareTable(tblId, groups, nameLab, opts){
   const tot={}; yrs.forEach(y=>tot[y]=groups.reduce((s,o)=>s+(o.vals[y]||0),0));
   const totAll=groups.reduce((s,o)=>s+o.total,0);
   let totRow=`<td>รวมทั้งหมด (${groups.length})</td>${yrs.map(y=>`<td>${fmt(tot[y])}</td>`).join('')}`;
-  if(FC){ const tf=linForecast(yrs.map(y=>tot[y])); const v=fcVerdict(tf.growthPct);
-    totRow+=`<td>${deltaArrow(tf.growthPct)}</td>`+tf.proj.map(pv=>`<td class="fccol">${fmt(pv)}</td>`).join('')+`<td><span class="pill ${v.cls}">${v.ar} ${v.t}</span></td>`;
+  if(FC){ const tf=fcScenarios(yrs.map(y=>tot[y])); const v=fcVerdict(tf.growthPct);
+    totRow+=`<td>${deltaArrow(tf.growthPct)}</td>`+tf.mid.map((pv,i)=>`<td class="fccol">${fmt(pv)}<div class="fc-range">${fmt(tf.low[i])}–${fmt(tf.high[i])}</div></td>`).join('')+`<td><span class="pill ${v.cls}">${v.ar} ${v.t}</span></td>`;
   } else {
     totRow+=`<td>${deltaArrow(pct((tot[last]||0)-(tot[first]||0),tot[first]||0))}</td><td>${fmt(totAll)}</td>`;
   }
@@ -907,24 +954,30 @@ function buildCompareBar(){
   bar.appendChild(seg);
   const fc=document.createElement('button'); fc.className='cmp-toggle'+(compareForecast?' on':''); fc.id='cmpForecastBtn';
   fc.innerHTML='<span class="cmpi">🔮</span> วิเคราะห์แนวโน้ม 3 ปี ('+FC_YEARS[0]+'–'+FC_YEARS[2]+')';
-  fc.onclick=()=>{ compareForecast=!compareForecast; fc.classList.toggle('on',compareForecast); const nt=document.getElementById('cmpNote'); if(nt)nt.hidden=!compareForecast; renderAll(); };
+  fc.onclick=()=>{ compareForecast=!compareForecast; fc.classList.toggle('on',compareForecast); const nt=document.getElementById('cmpNote'); if(nt)nt.hidden=!compareForecast; const mw=document.getElementById('cmpMethodWrap'); if(mw)mw.hidden=!compareForecast; renderAll(); };
   bar.appendChild(fc);
+  // ตัวเลือกวิธีวิเคราะห์แนวโน้ม
+  const mw=document.createElement('label'); mw.className='gfsel'; mw.id='cmpMethodWrap'; mw.hidden=!compareForecast;
+  const mlab=document.createElement('span'); mlab.className='flabel'; mlab.textContent='วิธีคำนวณ'; mw.appendChild(mlab);
+  const mseg=document.createElement('div'); mseg.className='seg'; mseg.id='cmpMethodSeg';
+  [['linear','เส้นตรง'],['cagr','CAGR'],['ma','ค่าเฉลี่ยเคลื่อนที่'],['holt','Holt']].forEach(([k,l])=>{const bt=document.createElement('button');bt.textContent=l;bt.className=(forecastMethod===k?'on':'');
+    bt.onclick=()=>{forecastMethod=k;mseg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===bt));renderAll();};mseg.appendChild(bt);});
+  mw.appendChild(mseg); bar.appendChild(mw);
   const leg=document.createElement('span'); leg.style.marginLeft='auto'; leg.innerHTML=yearLegendHTML(); bar.appendChild(leg);
   const note=document.createElement('div'); note.id='cmpNote'; note.hidden=!compareForecast;
   note.style.cssText='flex-basis:100%;font-size:12px;color:var(--muted);margin-top:2px';
   const y0=CMP_YEARS[0], yL=CMP_YEARS[CMP_YEARS.length-1];
-  note.innerHTML='🔮 วิเคราะห์แนวโน้มปี '+FC_YEARS[0]+'–'+FC_YEARS[2]+' (คอลัมน์ที่มี *) คำนวณด้วยเส้นแนวโน้มถดถอยเชิงเส้นจากข้อมูลจริงปี '+y0+'–'+yL+' · <b>แนวโน้ม/ปี</b> = อัตราเปลี่ยนแปลงเฉลี่ยเทียบค่าเฉลี่ย 4 ปี · <b>โอกาส</b>: เติบโต ▲ / ทรงตัว ▬ / ลดลง ▼ (ชี้เพื่อดูระดับความเชื่อมั่น) — เป็นการ<b>ประมาณการ</b>เพื่อดูทิศทาง ควรใช้ประกอบวิจารณญาณ'
+  note.innerHTML='🔮 วิเคราะห์แนวโน้มปี '+FC_YEARS[0]+'–'+FC_YEARS[2]+' (คอลัมน์ที่มี *) จากข้อมูลจริงปี '+y0+'–'+yL+' ตาม<b>วิธีคำนวณ</b>ที่เลือก · แต่ละปีแสดง <b>ค่ากลาง</b> พร้อม <b>ช่วงต่ำ–สูง (3 ฉากทัศน์)</b> ใต้ตัวเลข · <b>แนวโน้ม/ปี</b> = อัตราเปลี่ยนแปลงเฉลี่ยต่อปี · <b>โอกาส</b>: เติบโต ▲ / ทรงตัว ▬ / ลดลง ▼ — เป็นการ<b>ประมาณการ</b>เพื่อดูทิศทาง ควรใช้ประกอบวิจารณญาณ'
     +'<details class="cmp-method"><summary>ดูวิธีคำนวณ</summary><div class="cmp-method-body">'
-    +'<b>วิธีวิเคราะห์แนวโน้ม: เส้นแนวโน้มถดถอยเชิงเส้น (Linear Regression · Least Squares)</b>'
+    +'<b>วิธีวิเคราะห์แนวโน้มที่เลือกได้ (จากข้อมูลจริงปี '+y0+'–'+yL+')</b>'
     +'<ol>'
-    +'<li>กำหนดปี '+y0+'–'+yL+' เป็นลำดับ x = 0, 1, 2, 3 และค่าจริงในแต่ละปีเป็น y (มี n = 4 จุด)</li>'
-    +'<li>หาความชัน b และจุดตัดแกน a ที่ทำให้ผลรวมกำลังสองของส่วนต่างน้อยที่สุด:<br><code>b = (n·Σxy − Σx·Σy) / (n·Σx² − (Σx)²)</code> &nbsp;และ&nbsp; <code>a = (Σy − b·Σx) / n</code></li>'
-    +'<li>ค่าวิเคราะห์แนวโน้ม: <code>ŷ(t) = a + b·t</code> โดย t = 4 → ปี '+FC_YEARS[0]+', t = 5 → '+FC_YEARS[1]+', t = 6 → '+FC_YEARS[2]+' (ถ้าได้ค่าติดลบจะปรับเป็น 0)</li>'
-    +'<li><b>แนวโน้ม/ปี</b> = (b ÷ ค่าเฉลี่ย 4 ปี) × 100% — อัตราเปลี่ยนแปลงเฉลี่ยต่อปีเทียบกับค่าเฉลี่ย</li>'
-    +'<li><b>โอกาส</b>: <span style="color:#1e7a42;font-weight:700">เติบโต ▲</span> ถ้า &gt; +2% · <span style="color:var(--warn);font-weight:700">ทรงตัว ▬</span> ถ้า −2% ถึง +2% · <span style="color:var(--crit);font-weight:700">ลดลง ▼</span> ถ้า &lt; −2%</li>'
-    +'<li><b>ความเชื่อมั่น</b> R² = 1 − (SSเหลือ ÷ SSรวม): สูง ≥ 0.80 · กลาง 0.50–0.79 · ต่ำ &lt; 0.50 (ยิ่งใกล้ 1 ข้อมูลจริงยิ่งแนบเส้นแนวโน้ม วิเคราะห์แนวโน้มยิ่งน่าเชื่อถือ)</li>'
+    +'<li><b>เส้นตรง (Linear Regression · Least Squares)</b> — ลากเส้นตรงที่ผลรวมกำลังสองของส่วนต่างน้อยที่สุด <code>ŷ = a + b·t</code> เหมาะกับแนวโน้มคงที่</li>'
+    +'<li><b>CAGR (อัตราเติบโตทบต้น)</b> — <code>r = (ค่าปีล่าสุด/ค่าปีแรก)^(1/(n−1)) − 1</code> แล้วทบต้นไปข้างหน้า <code>ค่าปีล่าสุด·(1+r)^k</code> เหมาะกับข้อมูลที่โตเป็นเปอร์เซ็นต์</li>'
+    +'<li><b>ค่าเฉลี่ยเคลื่อนที่ (Moving Average, 3 ปี)</b> — พยากรณ์ปีถัดไป = ค่าเฉลี่ย 3 ปีล่าสุด แล้วเลื่อนหน้าต่างต่อไป ช่วยลดความผันผวน</li>'
+    +'<li><b>Holt (Double Exponential Smoothing)</b> — ปรับ “ระดับ” และ “แนวโน้ม” โดยให้น้ำหนักปีล่าสุดมากกว่า (α=0.6, β=0.35) เหมาะกับข้อมูลที่มีเทรนด์และผันผวน</li>'
     +'</ol>'
-    +'<div class="cmp-method-eg"><b>ตัวอย่าง</b> (รอบ 1 Portfolio · ผู้สมัคร): ค่าจริง 19,432 / 28,352 / 29,917 / 33,908 → คำนวณได้ b ≈ 4,499, a ≈ 21,153 → ปี '+FC_YEARS[0]+' = 21,153 + 4,499×4 ≈ <b>39,151</b> · เพิ่มเฉลี่ย ≈ 16.1%/ปี → โอกาส “เติบโต”</div>'
+    +'<div class="cmp-method-eg"><b>3 ฉากทัศน์ (ต่ำ–กลาง–สูง):</b> <b>ค่ากลาง</b> = ผลจากวิธีที่เลือก · <b>ต่ำ/สูง</b> = ค่ากลาง ± 1.5 × RMSE × √(ระยะปี) โดย RMSE คือความคลาดเคลื่อนของวิธีนั้นเทียบกับข้อมูลจริง (ยิ่งวิธีทำนายอดีตแม่น ช่วงยิ่งแคบ) · ในกราฟแสดงเป็นพื้นที่แรเงา · <b>แนวโน้ม/ปี</b>: เติบโต &gt;+2% · ทรงตัว −2% ถึง +2% · ลดลง &lt;−2%</div>'
+    +'<div class="cmp-method-eg" style="border-top:none;padding-top:0"><b>หมายเหตุ:</b> ข้อมูลมีเพียง 4 ปี วิธีเรียบง่าย (เส้นตรง/CAGR/Holt) มักเหมาะสุด · ควรระวังปัจจัยนโยบาย/โควตาที่ไม่ได้อยู่ในตัวเลขในอดีต</div>'
     +'</div></details>';
   bar.appendChild(note);
 }
@@ -1200,6 +1253,13 @@ function lineChart(box, years, series, hiddenSet, fcFrom){
     const tx=el('text',{x:padL-10,y,'text-anchor':'end','dominant-baseline':'middle'});tx.setAttribute('fill','var(--ink-2)');tx.style.fontSize='10px';tx.style.fontWeight='500';tx.textContent=fmt(v);svg.appendChild(tx);}
   years.forEach((yr,i)=>{const isF=hasFC&&i>=fcFrom;const tx=el('text',{x:xAt(i),y:padT+plotH+28,'text-anchor':'middle'});tx.setAttribute('fill',isF?'var(--accent-ink)':'var(--ink)');tx.style.fontWeight='600';tx.style.fontSize='10.5px';tx.textContent='ปี '+yr+(isF?' *':'');svg.appendChild(tx);});
   svg.appendChild(el('line',{class:'axis',x1:padL,y1:padT+plotH,x2:W-padR,y2:padT+plotH}));
+  // ช่วงฉากทัศน์ (ต่ำ–สูง) แบบพื้นที่แรเงา
+  vis.forEach(s=>{ if(!s.band)return;
+    const idx=[]; s.band.forEach((bd,i)=>{if(bd)idx.push(i);}); if(idx.length<2)return;
+    const hi=idx.map(i=>[xAt(i),yAt(s.band[i][1])]), lo=idx.map(i=>[xAt(i),yAt(s.band[i][0])]);
+    let d='M'+hi.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L')+' L'+lo.slice().reverse().map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L')+' Z';
+    svg.appendChild(el('path',{d,fill:`var(${s.sv})`,'fill-opacity':0.13,stroke:'none'}));
+  });
   vis.forEach(s=>{
     const pts=s.values.map((v,i)=>[xAt(i),yAt(v)]);
     const seg=arr=>smoothPath(arr);
@@ -2792,19 +2852,21 @@ function renderFlowModal(){
   const yrs=[...YEARS].sort((a,b)=>a-b);
   const allYears=yrs.concat(FC_YEARS);
   const defs=[['ผู้สมัคร','ap','--s1'],['ผ่านคัดเลือก','ps','--s2'],['ยืนยันสิทธิ์','wn','--s3'],['รายงานตัว','in','--s4']];
-  const series=defs.map(([lab,k,sv])=>{const actual=yrs.map(y=>per[y][k]); const f=linForecast(actual);
-    return {lab,sv,k,f,values:actual.concat(f.proj)};});
+  const series=defs.map(([lab,k,sv])=>{const actual=yrs.map(y=>per[y][k]); const s=fcScenarios(actual);
+    // band: null for actual years, [low,high] for forecast years (start at last actual for continuity)
+    const band=allYears.map((y,i)=>{ if(i<yrs.length-1)return null; if(i===yrs.length-1){const lv=actual[actual.length-1];return [lv,lv];} const h=i-yrs.length; return [s.low[h],s.high[h]]; });
+    return {lab,sv,k,sc:s,values:actual.concat(s.mid),band};});
   lineChart(document.getElementById('flowMChart'), allYears, series, flowMHidden, yrs.length);
   const leg=document.getElementById('flowMLegend');
   leg.innerHTML=series.map(s=>`<button class="lg-btn${flowMHidden.has(s.lab)?' off':''}" data-l="${esc(s.lab)}"><span class="sw" style="background:var(${s.sv})"></span>${s.lab}</button>`).join('');
   leg.querySelectorAll('.lg-btn').forEach(b=>b.onclick=()=>{const l=b.dataset.l; if(flowMHidden.has(l))flowMHidden.delete(l);else flowMHidden.add(l); renderFlowModal();});
   const tbl=document.getElementById('flowMTable');
   let h='<thead><tr><th>ตัวชี้วัด</th>'+yrs.map(y=>`<th>ปี ${y}</th>`).join('')+'<th>แนวโน้ม/ปี</th>'+FC_YEARS.map(y=>`<th class="fccol">ปี ${y} *</th>`).join('')+'<th>โอกาส</th></tr></thead><tbody>';
-  series.forEach(s=>{const actual=yrs.map(y=>per[y][s.k]); const v=fcVerdict(s.f.growthPct);
+  series.forEach(s=>{const actual=yrs.map(y=>per[y][s.k]); const v=fcVerdict(s.sc.growthPct);
     h+=`<tr><td><span class="sksw" style="background:var(${s.sv})"></span>${s.lab}</td>`
       +actual.map(x=>`<td>${fmt(x)}</td>`).join('')
-      +`<td>${deltaArrow(s.f.growthPct)}</td>`
-      +s.f.proj.map(pv=>`<td class="fccol tnum">${fmt(pv)}</td>`).join('')
+      +`<td>${deltaArrow(s.sc.growthPct)}</td>`
+      +s.sc.mid.map((pv,i)=>`<td class="fccol tnum">${fmt(pv)}<div class="fc-range">${fmt(s.sc.low[i])}–${fmt(s.sc.high[i])}</div></td>`).join('')
       +`<td><span class="pill ${v.cls}">${v.ar} ${v.t}</span></td></tr>`;});
   h+='</tbody>'; tbl.className='dt compact cmptbl'; tbl.innerHTML=h;
   const note=document.getElementById('flowMNote'); if(note)note.hidden=false;
