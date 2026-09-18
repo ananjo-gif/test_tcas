@@ -238,6 +238,15 @@
   .dt tr.deltarow td{font-size:12px;border-bottom:1px solid var(--border-2)}
   .dt tr.deltarow td:first-child{color:var(--muted);font-weight:500}
   .dt tr.seprow td{padding:3px;border:none;background:transparent}
+  /* forecast rows in year-compare table */
+  .dt tr.fcsep td{padding:6px 12px;font-size:11px;font-weight:600;color:var(--accent-ink);text-align:left;white-space:normal;
+    background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-top:1px dashed color-mix(in srgb,var(--accent) 55%,transparent);border-bottom:none}
+  .dt tr.fcrow td{background:color-mix(in srgb,var(--accent) 5%,var(--surface))}
+  .dt tr.fcrow:hover td{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+  .dt tr.fcrow td:first-child{color:var(--accent-ink);font-weight:600}
+  .dt td.fc .v{color:var(--accent-ink);font-weight:600}
+  .dt td.fc .v.dash{color:var(--muted);font-weight:400}
+  .dt td.fc .bg{background:var(--accent);opacity:.12}
 
   /* svg chart */
   .chartbox{width:100%;position:relative}
@@ -1424,7 +1433,19 @@ function renderTrend(){
     {lab:'ยืนยันสิทธิ์',sv:'--s3',values:YEARS.map(y=>s4(y,'wn'))},
     {lab:'รายงานตัว',sv:'--s4',values:YEARS.map(y=>s4(y,'in'))},
   ];
-  lineChart(document.getElementById('trendChart'), YEARS, series);
+  let years=YEARS, fcFrom;
+  if(compareForecast){
+    years=YEARS.concat(FC_YEARS);
+    fcFrom=YEARS.length;
+    // ต่อเส้นตัวชี้วัดหลัก 4 ตัวด้วยค่ากลาง + แถบช่วงต่ำ–สูง (แผน มคอ. ไม่วิเคราะห์แนวโน้ม)
+    series.forEach(s=>{
+      if(s.lab==='แผน มคอ.') return;
+      const sc=fcScenarios(s.values);
+      s.band=s.values.map(()=>null).concat(sc.mid.map((_,i)=>[sc.low[i],sc.high[i]]));
+      s.values=s.values.concat(sc.mid);
+    });
+  }
+  lineChart(document.getElementById('trendChart'), years, series, null, fcFrom);
   renderTrendLegend(series);
 }
 
@@ -2278,25 +2299,32 @@ function renderYearCompare(){
     per[y].pl = planScopeFor(y);
   });
   // columns = metrics ; rows = years. (transposed)
+  // mk = base metric key for forecast (count cols) · rn/rd = numerator/denominator metric for rate cols · plan:true = plan-based (ไม่วิเคราะห์แนวโน้ม)
   const COLS=[
-    {lab:'แผนรวม (มคอ.)',f:p=>p.pl,rate:false},
-    {lab:'ผู้สมัคร (รายการ)',f:p=>p.ap,rate:false},
-    {lab:'ผ่านคัดเลือก',f:p=>p.ps,rate:false},
-    {lab:'ยืนยันสิทธิ์',f:p=>p.wn,rate:false},
-    {lab:'รายงานตัว',f:p=>p.in,rate:false},
-    {lab:'แผนการรับ',f:p=>p.rc,rate:false},
-    {lab:'% ผ่าน',f:p=>pct(p.ps,p.ap),rate:true},
-    {lab:'% ยืนยัน',f:p=>pct(p.wn,p.ps),rate:true},
-    {lab:'% รายงานตัว',f:p=>pct(p.in,p.wn),rate:true},
-    {lab:'% บรรลุแผน',f:p=>pct(p.in,p.pl),rate:true},
+    {lab:'แผนรวม (มคอ.)',f:p=>p.pl,rate:false,plan:true},
+    {lab:'ผู้สมัคร (รายการ)',f:p=>p.ap,rate:false,mk:'ap'},
+    {lab:'ผ่านคัดเลือก',f:p=>p.ps,rate:false,mk:'ps'},
+    {lab:'ยืนยันสิทธิ์',f:p=>p.wn,rate:false,mk:'wn'},
+    {lab:'รายงานตัว',f:p=>p.in,rate:false,mk:'in'},
+    {lab:'แผนการรับ',f:p=>p.rc,rate:false,plan:true},
+    {lab:'% ผ่าน',f:p=>pct(p.ps,p.ap),rate:true,rn:'ps',rd:'ap'},
+    {lab:'% ยืนยัน',f:p=>pct(p.wn,p.ps),rate:true,rn:'wn',rd:'ps'},
+    {lab:'% รายงานตัว',f:p=>pct(p.in,p.wn),rate:true,rn:'in',rd:'wn'},
+    {lab:'% บรรลุแผน',f:p=>pct(p.in,p.pl),rate:true,plan:true},
   ];
   const yl=YEARS; // ascending
+  // forecast scenarios per base metric (เฉพาะเมื่อเปิดโหมดวิเคราะห์แนวโน้ม)
+  const FCS = compareForecast ? {} : null;
+  if(FCS){ ['ap','ps','wn','in'].forEach(mk=>{ FCS[mk]=fcScenarios(yl.map(y=>per[y][mk])); }); }
   // precompute value matrix + per-column max/min-year for highlight & bar scaling
   COLS.forEach(c=>{
     c.vals=yl.map(y=>c.f(per[y]));
     let mx=-Infinity,mn=Infinity,mxi=0,mni=0;
     c.vals.forEach((v,i)=>{if(v>mx){mx=v;mxi=i;}if(v<mn){mn=v;mni=i;}});
     c.max=mx;c.mxi=mxi;c.mni=mni;c.allEq=(mx===mn);
+    // แถบใช้สเกลรวมทั้งค่าจริงและค่าวิเคราะห์แนวโน้ม เพื่อให้เทียบกันได้ในสเกลเดียว
+    c.barMax=mx;
+    if(FCS && !c.plan){ const s=c.rate?null:FCS[c.mk]; if(s) c.barMax=Math.max(c.barMax,...s.mid); }
   });
   function dArrow(d,unit){const c=d>0.05?'up':d<-0.05?'down':'flat';const ar=d>0.05?'▲':d<-0.05?'▼':'▬';
     return `<span class="k-delta ${c}">${ar} ${Math.abs(d).toFixed(1)}${unit}</span>`;}
@@ -2306,11 +2334,24 @@ function renderYearCompare(){
     h+='<tr class="yr"><td>'+y+'</td>'+COLS.map(c=>{
       const v=c.vals[ri];
       const disp=c.rate?v.toFixed(1)+'%':fmt(v);
-      const w=c.max>0?Math.round(100*v/c.max):0;
+      const w=c.barMax>0?Math.round(100*v/c.barMax):0;
       const cls=c.allEq?'':(ri===c.mxi?'hi':ri===c.mni?'lo':'');
       return `<td class="num"><span class="bg" style="width:${w}%"></span><span class="v ${cls}">${disp}</span></td>`;
     }).join('')+'</tr>';
   });
+  // forecast rows (2570–2572) — เมื่อเปิดโหมดวิเคราะห์แนวโน้ม 3 ปี
+  if(FCS){
+    h+='<tr class="fcsep"><td colspan="'+(COLS.length+1)+'">🔮 วิเคราะห์แนวโน้ม '+FC_YEARS[0]+'–'+FC_YEARS[FC_YEARS.length-1]+' ('+(FC_METHOD_LABELS[forecastMethod]||'')+') · ค่ากลาง พร้อมช่วงต่ำ–สูง</td></tr>';
+    FC_YEARS.forEach((fy,fi)=>{
+      h+='<tr class="yr fcrow"><td>'+fy+' *</td>'+COLS.map(c=>{
+        if(c.plan) return '<td class="num fc"><span class="v dash">—</span></td>';
+        if(c.rate){ const nv=FCS[c.rn].mid[fi], dv=FCS[c.rd].mid[fi]; return `<td class="num fc"><span class="v">${pct(nv,dv).toFixed(1)}%</span></td>`; }
+        const s=FCS[c.mk], v=s.mid[fi];
+        const w=c.barMax>0?Math.round(100*v/c.barMax):0;
+        return `<td class="num fc"><span class="bg" style="width:${w}%"></span><span class="v">${fmt(v)}</span><div class="fc-range">${fmt(s.low[fi])}–${fmt(s.high[fi])}</div></td>`;
+      }).join('')+'</tr>';
+    });
+  }
   h+='<tr class="seprow"><td colspan="'+(COLS.length+1)+'"></td></tr>';
   // delta rows: consecutive-year change
   for(let i=1;i<yl.length;i++){
