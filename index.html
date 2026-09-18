@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="th">
 <head>
@@ -1703,7 +1704,7 @@ function renderFacTable(ctx, rows){
     const exp=ctx.exp.has(o._k), nm=o._k.replace(/"/g,'&quot;');
     const fcSuffix=ctx.isProg?` <span style="color:var(--muted);font-weight:400">· ${(fcMap[o._k]||'').replace(/^คณะ/,'').replace(/^วิทยาลัย/,'วล.')}</span>`:'';
     h+=`<tr><td class="strong"><span class="factoggle" data-k="${nm}">${exp?'▾':'▸'} ${num}) ${o._k}${fcSuffix}</span></td>`
-      +`<td>${fmt(o._plan)}</td><td>${fmt(o.ap)}</td><td>${fmt(o.ps)}</td><td>${fmt(o.wn)}</td><td class="inc">${fmt(o.in)}</td><td class="ratio">${o.wn?o._ratio.toFixed(1)+' : 1':'—'}</td><td>${o._plan?o._y.toFixed(0)+'%':'—'}</td>${facStatusCell(o._plan,o.in)}</tr>`;
+      +`<td>${fmt(o._plan)}</td><td>${fmt(o.ap)}</td><td>${fmt(o.ps)}</td><td>${fmt(o.wn)}</td><td class="inc">${fmt(o.in)}</td><td class="ratio">${o.wn?Math.round(o._ratio)+' : 1':'—'}</td><td>${o._plan?o._y.toFixed(0)+'%':'—'}</td>${facStatusCell(o._plan,o.in)}</tr>`;
     if(exp) h+=facRoundSubTable(ctx,o._k);
   });
   h+='</tbody>'; tbl.innerHTML=h;
@@ -3057,5 +3058,3 @@ renderAll();
 
 </body>
 </html>
-
-
