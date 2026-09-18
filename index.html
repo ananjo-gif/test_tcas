@@ -238,6 +238,8 @@
   .dt tr.deltarow td{font-size:12px;border-bottom:1px solid var(--border-2)}
   .dt tr.deltarow td:first-child{color:var(--muted);font-weight:500}
   .dt tr.seprow td{padding:3px;border:none;background:transparent}
+  .dt td.ratio{color:var(--accent-ink);font-weight:600;white-space:nowrap}
+  .dt thead th{vertical-align:bottom;line-height:1.25}
   /* forecast rows in year-compare table */
   .dt tr.fcsep td{padding:6px 12px;font-size:11px;font-weight:600;color:var(--accent-ink);text-align:left;white-space:normal;
     background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-top:1px dashed color-mix(in srgb,var(--accent) 55%,transparent);border-bottom:none}
@@ -1658,7 +1660,7 @@ function facRoundSubTable(ctx,name){
     }
   });
   let so=0,st=0,su=0; for(const r of rr){if(!r.rc)continue;const p=100*r.in/r.rc;if(p>100.05)so++;else if(p<99.95)su++;else st++;}
-  return `<tr class="amsub"><td colspan="8"><div class="subttl">แยกตามรอบการสมัคร · ${statSummary(so,st,su,'รอบ')} · คลิกชื่อรอบ ▸ ดูโครงการ</div><div class="tbl-wrap"><table class="dt subtbl roundtbl">${SUB_COLGROUP8}${subHead(FAC_RND_COLS,rndSortK,rndSortD)}<tbody>${body}</tbody></table></div></td></tr>`;
+  return `<tr class="amsub"><td colspan="9"><div class="subttl">แยกตามรอบการสมัคร · ${statSummary(so,st,su,'รอบ')} · คลิกชื่อรอบ ▸ ดูโครงการ</div><div class="tbl-wrap"><table class="dt subtbl roundtbl">${SUB_COLGROUP8}${subHead(FAC_RND_COLS,rndSortK,rndSortD)}<tbody>${body}</tbody></table></div></td></tr>`;
 }
 function statusKey(inc,plan){ if(!plan)return 'none'; const p=100*inc/plan; return p>100.05?'over':(p<99.95?'under':'target'); }
 function statSummary(over,tgt,under,unit){
@@ -1680,7 +1682,7 @@ function renderFacTable(ctx, rows){
   // แผน มคอ. (นับ 1 ครั้งต่อสาขา/คณะ ตามไฟล์แผน)
   const planMap={};
   for(const y of state.years){const pf=planFileFor(y); const src=ctx.isProg?pf.prog:pf.fac; for(const k in src) planMap[k]=(planMap[k]||0)+src[k];}
-  const g=groupSum(rows,keyFn).map(o=>{const pl=planMap[o._k]||0;const rp=pl?100*o.in/pl:-1;return {...o,_y:rp,_mj:mjMap[o._k]||'￿',_plan:pl,_stp:rp};});
+  const g=groupSum(rows,keyFn).map(o=>{const pl=planMap[o._k]||0;const rp=pl?100*o.in/pl:-1;return {...o,_y:rp,_ratio:(o.wn?o.ap/o.wn:-1),_mj:mjMap[o._k]||'￿',_plan:pl,_stp:rp};});
   g.sort((a,b)=>{const x=a[ctx.sortK],y=b[ctx.sortK];return typeof x==='string'?ctx.sortD*x.localeCompare(y,'th'):ctx.sortD*((x||0)-(y||0));});
   // สรุปสถานะบนหัวตาราง
   let cOver=0,cTgt=0,cUnder=0;
@@ -1694,14 +1696,14 @@ function renderFacTable(ctx, rows){
   const per=ctx.perPage||9999, pages=Math.max(1,Math.ceil(gf.length/per));
   if(ctx.page>=pages)ctx.page=pages-1; if(ctx.page<0)ctx.page=0;
   const pageRows=gf.slice(ctx.page*per, ctx.page*per+per);
-  const cols=[{k:'_mj',lab:nameLab},{k:'_plan',lab:'แผน มคอ.'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_y',lab:'%รายงานตัว/แผน'},{k:'_stp',lab:'สถานะ'}];
+  const cols=[{k:'_mj',lab:nameLab},{k:'_plan',lab:'แผน มคอ.'},{k:'ap',lab:'สมัคร (รายการ)'},{k:'ps',lab:'ผ่าน'},{k:'wn',lab:'ยืนยัน'},{k:'in',lab:'รายงานตัว',cls:'inc'},{k:'_ratio',lab:'อัตราสมัคร :<br>มีสิทธิ์เข้าศึกษา'},{k:'_y',lab:'%รายงานตัว/แผน'},{k:'_stp',lab:'สถานะ'}];
   let h='<thead><tr>'+cols.map(c=>`<th data-k="${c.k}">${c.lab}<span class="ar">${ctx.sortK===c.k?(ctx.sortD<0?'▼':'▲'):''}</span></th>`).join('')+'</tr></thead><tbody>';
   pageRows.forEach((o,i)=>{
     const num=ctx.page*per+i+1;
     const exp=ctx.exp.has(o._k), nm=o._k.replace(/"/g,'&quot;');
     const fcSuffix=ctx.isProg?` <span style="color:var(--muted);font-weight:400">· ${(fcMap[o._k]||'').replace(/^คณะ/,'').replace(/^วิทยาลัย/,'วล.')}</span>`:'';
     h+=`<tr><td class="strong"><span class="factoggle" data-k="${nm}">${exp?'▾':'▸'} ${num}) ${o._k}${fcSuffix}</span></td>`
-      +`<td>${fmt(o._plan)}</td><td>${fmt(o.ap)}</td><td>${fmt(o.ps)}</td><td>${fmt(o.wn)}</td><td class="inc">${fmt(o.in)}</td><td>${o._plan?o._y.toFixed(0)+'%':'—'}</td>${facStatusCell(o._plan,o.in)}</tr>`;
+      +`<td>${fmt(o._plan)}</td><td>${fmt(o.ap)}</td><td>${fmt(o.ps)}</td><td>${fmt(o.wn)}</td><td class="inc">${fmt(o.in)}</td><td class="ratio">${o.wn?o._ratio.toFixed(1)+' : 1':'—'}</td><td>${o._plan?o._y.toFixed(0)+'%':'—'}</td>${facStatusCell(o._plan,o.in)}</tr>`;
     if(exp) h+=facRoundSubTable(ctx,o._k);
   });
   h+='</tbody>'; tbl.innerHTML=h;
